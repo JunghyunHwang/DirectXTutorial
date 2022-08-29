@@ -2,7 +2,7 @@
 #include "GraphicsEngine.h"
 
 VertexBuffer::VertexBuffer()
-	:mLayout(0)
+	: mLayout(0)
 	, mBuffer(0)
 {
 

@@ -21,10 +21,11 @@ AppWindow::~AppWindow()
 void AppWindow::onCreate()
 {
 	GraphicsEngine* instance = GraphicsEngine::getInstance();
+
 	instance->init();
-	mSwapChain = instance->createSwapChain();
 
 	RECT rc = getClientWindowRect();
+	mSwapChain = instance->createSwapChain();
 	mSwapChain->init(mHwnd, rc.right - rc.left, rc.bottom - rc.top);
 
 	vertex list[] =
@@ -37,15 +38,19 @@ void AppWindow::onCreate()
 
 	UINT sizeList = ARRAYSIZE(list);
 
-	mVb = instance->createVertexBuffer();
+	mVertexBuffer = instance->createVertexBuffer();
 
 	instance->createShaders();
 
 	void* shaderByteCode = nullptr;
-	UINT sizeShader = 0;
-	instance->getShaderBufferAndSize(&shaderByteCode, &sizeShader);
+	size_t sizeShader = 0;
 
-	mVb->load(list, sizeof(vertex), sizeList, shaderByteCode, sizeShader);
+	instance->compileVertexShader(L"VertexShader.hlsl", "vsmain", &shaderByteCode, &sizeShader);
+	mVertexShader = instance->createVertexShader(shaderByteCode, sizeShader);
+
+	mVertexBuffer->load(list, sizeof(vertex), sizeList, shaderByteCode, sizeShader);
+
+	instance->releaseCompiledShader();
 }
 
 void AppWindow::onUpdate()
@@ -57,18 +62,17 @@ void AppWindow::onUpdate()
 	instance->getImmediateDeviceContext()->setViewportSize(rc.right - rc.left, rc.bottom - rc.top);
 	
 	instance->setShader();
-	
-	instance->getImmediateDeviceContext()->setVertexBuffer(mVb);
+	instance->getImmediateDeviceContext()->setVertexShader(mVertexShader);
+	instance->getImmediateDeviceContext()->setVertexBuffer(mVertexBuffer);
 
-	instance->getImmediateDeviceContext()->drawTriangleStrip(mVb->getSizeVertexList(), 0);
-
+	instance->getImmediateDeviceContext()->drawTriangleStrip(mVertexBuffer->getSizeVertexList(), 0);
 	mSwapChain->present(false);
 }
 
 void AppWindow::onDestroy()
 {
 	Window::onDestroy();
+	mVertexBuffer->release();
 	mSwapChain->release();
-	mVb->release();
 	GraphicsEngine::getInstance()->release();
 }

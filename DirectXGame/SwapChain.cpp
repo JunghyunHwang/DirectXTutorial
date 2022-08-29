@@ -27,6 +27,7 @@ bool SwapChain::init(HWND hWnd, UINT width, UINT height)
 		return false;
 	}
 
+	// megayuchi 설명 참고
 	ID3D11Texture2D* buffer = NULL;
 	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &buffer);
 

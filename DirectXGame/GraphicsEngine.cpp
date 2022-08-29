@@ -1,7 +1,10 @@
+#include <d3dcompiler.h>
+
 #include "GraphicsEngine.h"
 #include "SwapChain.h"
 #include "DeviceContext.h"
 #include "VertexBuffer.h"
+#include "VertexShader.h"
 
 bool GraphicsEngine::init()
 {
@@ -28,17 +31,22 @@ bool GraphicsEngine::init()
 
 		if (SUCCEEDED(res))
 		{
-			mD3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**) &mDxgiDevice);
-			mDxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**) &mDxgiAdapter);
-			mDxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&mDxgiFactory);
-
-			mImmDeviceContext = new DeviceContext(mImmContext);
-
-			return true;
+			break;
 		}
 	}
 
-	return false;
+	if (FAILED(res))
+	{
+		return false;
+	}
+
+	mImmDeviceContext = new DeviceContext(mImmContext);
+
+	mD3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&mDxgiDevice);
+	mDxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&mDxgiAdapter);
+	mDxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&mDxgiFactory);
+
+	return true;
 }
 
 bool GraphicsEngine::release()
@@ -78,10 +86,8 @@ bool GraphicsEngine::createShaders()
 {
 	ID3DBlob* errblob = nullptr;
 
-	D3DCompileFromFile(L"shader.fx", nullptr, nullptr, "vsmain", "vs_5_0", NULL, NULL, &mVertexShaderBlob, &errblob);
 	D3DCompileFromFile(L"shader.fx", nullptr, nullptr, "psmain", "ps_5_0", NULL, NULL, &mPixelShaderBlob, &errblob);
 
-	mD3dDevice->CreateVertexShader(mVertexShaderBlob->GetBufferPointer(), mVertexShaderBlob->GetBufferSize(), nullptr, &mVertexShader);
 	mD3dDevice->CreatePixelShader(mPixelShaderBlob->GetBufferPointer(), mPixelShaderBlob->GetBufferSize(), nullptr, &mPixelShader);
 
 	return true;
@@ -89,14 +95,48 @@ bool GraphicsEngine::createShaders()
 
 bool GraphicsEngine::setShader()
 {
-	mImmContext->VSSetShader(mVertexShader, nullptr, 0);
 	mImmContext->PSSetShader(mPixelShader, nullptr, 0);
 
 	return true;
 }
 
-void GraphicsEngine::getShaderBufferAndSize(void** bytecode, UINT* size)
+VertexShader* GraphicsEngine::createVertexShader(const void* shaderByteCode, size_t byteCodeSize)
 {
-	*bytecode = mVertexShaderBlob->GetBufferPointer();
-	*size = (UINT)mVertexShaderBlob->GetBufferSize();
+	VertexShader* vs = new VertexShader();
+
+	if (!vs->init(shaderByteCode, byteCodeSize))
+	{
+		vs->release();
+		return nullptr;
+	}
+
+	return vs;
+}
+
+bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPointName, void** shaderByteCode, size_t* byteCodeSize)
+{
+	ID3DBlob* errorBlob = nullptr;
+	if (!SUCCEEDED(D3DCompileFromFile(fileName, nullptr, nullptr, entryPointName, "vs_5_0", 0, 0, &mBlob, &errorBlob)))
+	{
+		if (errorBlob)
+		{
+			errorBlob->Release();
+
+		}
+
+		return false;
+	}
+
+	*shaderByteCode = mBlob->GetBufferPointer();
+	*byteCodeSize = mBlob->GetBufferSize();
+
+	return true;
+}
+
+void GraphicsEngine::releaseCompiledShader()
+{
+	if (mBlob)
+	{
+		mBlob->Release();
+	}
 }

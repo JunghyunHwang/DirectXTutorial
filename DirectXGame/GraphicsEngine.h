@@ -5,6 +5,7 @@
 class SwapChain;
 class DeviceContext;
 class VertexBuffer;
+class VertexShader;
 
 class GraphicsEngine
 {
@@ -16,9 +17,14 @@ public:
 	SwapChain* createSwapChain();
 	DeviceContext* getImmediateDeviceContext();
 	VertexBuffer* createVertexBuffer();
+
+public:
 	bool createShaders();
 	bool setShader();
-	void getShaderBufferAndSize(void** bytecode, UINT* size);
+	VertexShader* createVertexShader(const void* shaderByteCode, size_t byteCodeSize);
+	bool compileVertexShader(const wchar_t* fileName, const char* entryPointName, void** shaderByteCode, size_t* byteCodeSize);
+	void releaseCompiledShader();
+
 private:
 	ID3D11Device* mD3dDevice; // 기능 지원 점검과 자원 할당에 사용
 	D3D_FEATURE_LEVEL mFeatureLevel;
@@ -29,6 +35,7 @@ private:
 	DeviceContext* mImmDeviceContext;
 
 private:
+	ID3DBlob* mBlob = nullptr;
 	ID3DBlob* mVertexShaderBlob = nullptr;
 	ID3DBlob* mPixelShaderBlob = nullptr;
 	ID3D11VertexShader* mVertexShader = nullptr;
@@ -37,4 +44,5 @@ private:
 private:
 	friend class SwapChain;
 	friend class VertexBuffer;
+	friend class VertexShader;
 };
