@@ -1,10 +1,12 @@
 #include <d3dcompiler.h>
+#include <cassert>
 
 #include "GraphicsEngine.h"
 #include "SwapChain.h"
 #include "DeviceContext.h"
 #include "VertexBuffer.h"
 #include "VertexShader.h"
+#include "PixelShader.h"
 
 bool GraphicsEngine::init()
 {
@@ -61,45 +63,6 @@ bool GraphicsEngine::release()
 	return true;
 }
 
-GraphicsEngine* GraphicsEngine::getInstance()
-{
-	static GraphicsEngine engine;
-	return &engine;
-}
-
-SwapChain* GraphicsEngine::createSwapChain()
-{
-	return new SwapChain();
-}
-
-DeviceContext* GraphicsEngine::getImmediateDeviceContext()
-{
-	return mImmDeviceContext;
-}
-
-VertexBuffer* GraphicsEngine::createVertexBuffer()
-{
-	return new VertexBuffer();
-}
-
-bool GraphicsEngine::createShaders()
-{
-	ID3DBlob* errblob = nullptr;
-
-	D3DCompileFromFile(L"shader.fx", nullptr, nullptr, "psmain", "ps_5_0", NULL, NULL, &mPixelShaderBlob, &errblob);
-
-	mD3dDevice->CreatePixelShader(mPixelShaderBlob->GetBufferPointer(), mPixelShaderBlob->GetBufferSize(), nullptr, &mPixelShader);
-
-	return true;
-}
-
-bool GraphicsEngine::setShader()
-{
-	mImmContext->PSSetShader(mPixelShader, nullptr, 0);
-
-	return true;
-}
-
 VertexShader* GraphicsEngine::createVertexShader(const void* shaderByteCode, size_t byteCodeSize)
 {
 	VertexShader* vs = new VertexShader();
@@ -113,10 +76,46 @@ VertexShader* GraphicsEngine::createVertexShader(const void* shaderByteCode, siz
 	return vs;
 }
 
+PixelShader* GraphicsEngine::createPixelShader(const void* shaderByteCode, size_t byteCodeSize)
+{
+	PixelShader* ps = new PixelShader();
+
+	if (!ps->init(shaderByteCode, byteCodeSize))
+	{
+		ps->release();
+		assert(false);
+		return nullptr;
+	}
+
+	return ps;
+}
+
 bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPointName, void** shaderByteCode, size_t* byteCodeSize)
 {
 	ID3DBlob* errorBlob = nullptr;
+
 	if (!SUCCEEDED(D3DCompileFromFile(fileName, nullptr, nullptr, entryPointName, "vs_5_0", 0, 0, &mBlob, &errorBlob)))
+	{
+		if (errorBlob)
+		{
+			errorBlob->Release();
+
+		}
+
+		return false;
+	}
+
+	*shaderByteCode = mBlob->GetBufferPointer();
+	*byteCodeSize = mBlob->GetBufferSize();
+
+	return true;
+}
+
+bool GraphicsEngine::compilePixelShader(const wchar_t* fileName, const char* entryPointName, void** shaderByteCode, size_t* byteCodeSize)
+{
+	ID3DBlob* errorBlob = nullptr;
+
+	if (!SUCCEEDED(D3DCompileFromFile(fileName, nullptr, nullptr, entryPointName, "ps_5_0", 0, 0, &mBlob, &errorBlob)))
 	{
 		if (errorBlob)
 		{
@@ -139,4 +138,25 @@ void GraphicsEngine::releaseCompiledShader()
 	{
 		mBlob->Release();
 	}
+}
+
+GraphicsEngine* GraphicsEngine::getInstance()
+{
+	static GraphicsEngine engine;
+	return &engine;
+}
+
+SwapChain* GraphicsEngine::createSwapChain()
+{
+	return new SwapChain();
+}
+
+DeviceContext* GraphicsEngine::getImmediateDeviceContext()
+{
+	return mImmDeviceContext;
+}
+
+VertexBuffer* GraphicsEngine::createVertexBuffer()
+{
+	return new VertexBuffer();
 }
